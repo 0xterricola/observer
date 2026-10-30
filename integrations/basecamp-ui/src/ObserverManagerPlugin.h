@@ -21,7 +21,7 @@ class ObserverManagerPlugin
         IID ObserverManagerPluginInterface_iid
         FILE "../metadata.json")
 
-    Q_INTERFACES(ObserverManagerPluginInterface)
+    Q_INTERFACES(ObserverManagerPluginInterface LogosViewPlugin)
 
 public:
     explicit ObserverManagerPlugin(QObject* parent = nullptr);

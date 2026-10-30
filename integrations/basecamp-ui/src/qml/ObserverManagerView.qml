@@ -9,9 +9,22 @@ Rectangle {
     implicitHeight: 620
     color: "#0b0d10"
 
-    readonly property var backend:
-        logos ? logos.module("observer_ui") : null
+    readonly property var backend: logos.module("observer_ui")
+    property bool backendConnected: false
 
+    Connections {
+        target: logos
+
+        function onViewModuleReadyChanged(moduleName, isReady) {
+            if (moduleName === "observer_ui")
+                root.backendConnected = isReady && root.backend !== null
+        }
+    }
+
+    Component.onCompleted: {
+        root.backendConnected =
+            root.backend !== null && logos.isViewModuleReady("observer_ui")
+    }
 
     property bool advancedSettingsExpanded: false
 
@@ -294,7 +307,7 @@ Rectangle {
                                           : "Recheck Chat"
 
                                     enabled: !!root.backend
-                                        && root.backend.ready
+                                        && root.backendConnected
                                         && (
                                             check.name === "Observer Service"
                                             ? !root.backend.serviceBusy
@@ -343,7 +356,7 @@ Rectangle {
                     Button {
                         text: "Run Setup Checks"
                         enabled: !!root.backend
-                            && root.backend.ready
+                            && root.backendConnected
                             && !root.backend.serviceBusy
                             && !root.backend.chatBusy
                             && !root.backend.healthBusy
@@ -410,7 +423,7 @@ Rectangle {
                         : "Pair New Device"
 
                     enabled: !!root.backend
-                        && root.backend.ready
+                        && root.backendConnected
                         && !root.backend.serviceBusy
                         && !root.backend.pairingBusy
                         && root.backend.serviceStatus === "running"
@@ -588,7 +601,7 @@ Rectangle {
                     Button {
                         text: "Start Observer"
                         enabled: !!root.backend
-                            && root.backend.ready
+                            && root.backendConnected
                             && !root.backend.serviceBusy
                             && root.backend.serviceStatus !== "running"
                             && root.backend.serviceStatus !== "starting"
@@ -599,7 +612,7 @@ Rectangle {
                     Button {
                         text: "Stop Observer"
                         enabled: !!root.backend
-                            && root.backend.ready
+                            && root.backendConnected
                             && !root.backend.serviceBusy
                             && (root.backend.serviceStatus === "running"
                                 || root.backend.serviceStatus === "starting")
@@ -613,7 +626,7 @@ Rectangle {
                             : "Refresh Status"
 
                         enabled: !!root.backend
-                            && root.backend.ready
+                            && root.backendConnected
                             && !root.backend.serviceBusy
 
                         onClicked: root.backend.refreshServiceStatus()
@@ -727,7 +740,7 @@ Rectangle {
                           : "Check Health"
 
                     enabled: !!root.backend
-                             && root.backend.ready
+                             && root.backendConnected
                              && !root.backend.healthBusy
                              && endpointField.text.trim().length > 0
                              && certField.text.trim().length > 0
@@ -767,7 +780,7 @@ Rectangle {
                         ? "Checking..."
                         : "Test Native Chat"
                     enabled: !!root.backend
-                        && root.backend.ready
+                        && root.backendConnected
                         && !root.backend.nativeChatBusy
                     onClicked: root.backend.checkNativeChatStatus()
                 }
@@ -839,7 +852,7 @@ Rectangle {
                             ? "Checking..."
                             : "Check Chat"
                         enabled: !!root.backend
-                            && root.backend.ready
+                            && root.backendConnected
                             && !root.backend.chatBusy
                         onClicked: root.backend.checkChatHealth()
                     }

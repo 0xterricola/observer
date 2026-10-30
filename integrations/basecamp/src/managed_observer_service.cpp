@@ -179,8 +179,7 @@ ManagedObserverResult ManagedObserverService::start(
         "--host", network.host,
         "--advertise-host", network.host,
         "--port", "18446",
-        "--state-dir", stateDir.string(),
-        "--chat-bridge", "http://127.0.0.1:8645/rpc"
+        "--state-dir", stateDir.string()
     });
 
     // This socket pair is private to Observer Core and its child.

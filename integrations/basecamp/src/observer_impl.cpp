@@ -50,12 +50,58 @@ std::string ObserverImpl::getHealth(
 }
 
 
-// Implemented in chat_health.cpp.
-std::string probeChatHealth();
-
 std::string ObserverImpl::getChatHealth() {
-    return probeChatHealth();
+    try {
+        const auto native =
+            nlohmann::json::parse(getNativeChatStatus());
+
+        const bool sdk = native.value("ok", false);
+        const bool addressOk =
+            native.value("address_call_ok", false);
+        const bool chat =
+            sdk && addressOk &&
+            native.value("address_available", false);
+        const bool readable =
+            sdk && native.value("conversations_readable", false);
+
+        nlohmann::json count = nullptr;
+        if (readable &&
+            native.contains("listed_conversation_count")) {
+            count = native["listed_conversation_count"];
+        }
+
+        const char* reason =
+            !sdk ? "native_sdk_unavailable" :
+            !addressOk ? "chat_sdk_error" :
+            !chat ? "chat_not_started" :
+            !readable ? "conversations_unavailable" :
+            "conversations_readable";
+
+        return nlohmann::json{
+            {"source", "native_sdk"},
+            {"native_chat", {{"reachable", sdk}}},
+            {"basecamp_chat", {{"available", chat}}},
+            {"conversations", {
+                {"readable", readable},
+                {"count", count}
+            }},
+            {"reason", reason}
+        }.dump();
+
+    } catch (...) {
+        return nlohmann::json{
+            {"source", "native_sdk"},
+            {"native_chat", {{"reachable", false}}},
+            {"basecamp_chat", {{"available", false}}},
+            {"conversations", {
+                {"readable", false},
+                {"count", nullptr}
+            }},
+            {"reason", "native_chat_probe_failed"}
+        }.dump();
+    }
 }
+
 
 std::string ObserverImpl::getNativeChatStatus() {
     try {

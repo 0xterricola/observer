@@ -93,7 +93,7 @@ ObserverManagerBackend::ObserverManagerBackend(
     setNativeChatStatus(QStringLiteral("Not tested"));
     setNativeChatDetails(QStringLiteral(
         "Native Chat has not been tested."));
-    setChatBridgeStatus(QStringLiteral("Not checked"));
+    setChatSdkStatus(QStringLiteral("Not checked"));
     setChatStatus(QStringLiteral("Not checked"));
     setConversationsStatus(QStringLiteral("Not checked"));
     setChatDetails(QString());
@@ -335,7 +335,7 @@ void ObserverManagerBackend::checkChatHealth()
         return;
 
     setChatBusy(true);
-    setChatBridgeStatus(QStringLiteral("Checking..."));
+    setChatSdkStatus(QStringLiteral("Checking..."));
     setChatStatus(QStringLiteral("Checking..."));
     setConversationsStatus(QStringLiteral("Checking..."));
     setChatDetails(QString());
@@ -359,7 +359,7 @@ void ObserverManagerBackend::checkChatHealth()
                     guard->setChatBusy(false);
 
                     if (!succeeded) {
-                        guard->setChatBridgeStatus(
+                        guard->setChatSdkStatus(
                             QStringLiteral("Unknown"));
                         guard->setChatStatus(
                             QStringLiteral("Unknown"));
@@ -377,7 +377,7 @@ void ObserverManagerBackend::checkChatHealth()
 
                     if (error.error != QJsonParseError::NoError ||
                         !document.isObject()) {
-                        guard->setChatBridgeStatus(
+                        guard->setChatSdkStatus(
                             QStringLiteral("Unknown"));
                         guard->setChatStatus(
                             QStringLiteral("Unknown"));
@@ -389,15 +389,15 @@ void ObserverManagerBackend::checkChatHealth()
                     }
 
                     const QJsonObject response = document.object();
-                    const bool bridge =
-                        response.value("chat_bridge")
+                    const bool sdk =
+                        response.value("native_chat")
                             .toObject().value("reachable").toBool();
                     const bool chat =
                         response.value("basecamp_chat")
                             .toObject().value("available").toBool();
 
-                    guard->setChatBridgeStatus(
-                        bridge ? QStringLiteral("Responding")
+                    guard->setChatSdkStatus(
+                        sdk ? QStringLiteral("Responding")
                                : QStringLiteral("Unavailable"));
 
                     guard->setChatStatus(
@@ -416,18 +416,16 @@ void ObserverManagerBackend::checkChatHealth()
                     const int count =
                         conversations.value("count").toInt(-1);
 
-                    if (!bridge) {
-                        guard->setChatBridgeStatus(
-                            reason == QStringLiteral("bridge_timeout")
-                            ? QStringLiteral("Timed out")
-                            : QStringLiteral("Unavailable"));
+                    if (!sdk) {
+                        guard->setChatSdkStatus(
+                            QStringLiteral("Unavailable"));
                         guard->setChatStatus(QStringLiteral("Unknown"));
                     } else if (!chat) {
                         guard->setChatStatus(
                             reason == QStringLiteral("chat_not_started")
                             ? QStringLiteral("Not started")
-                            : reason == QStringLiteral("chat_rpc_timeout")
-                            ? QStringLiteral("Timed out")
+                            : reason == QStringLiteral("chat_sdk_error")
+                            ? QStringLiteral("SDK error")
                             : QStringLiteral("Unknown"));
                     }
 
@@ -439,9 +437,7 @@ void ObserverManagerBackend::checkChatHealth()
                             QStringLiteral("Not tested"));
                     } else {
                         guard->setConversationsStatus(
-                            reason == QStringLiteral("conversations_timeout")
-                            ? QStringLiteral("Timed out")
-                            : QStringLiteral("Unavailable"));
+                            QStringLiteral("Unavailable"));
                     }
 
                     guard->setChatDetails(reason);

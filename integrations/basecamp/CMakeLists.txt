@@ -18,7 +18,6 @@ logos_module(
         src/managed_observer_service.cpp
         src/observer_health.h
         src/observer_health.cpp
-        src/chat_health.cpp
         src/native_chat_dispatch.h
         src/native_chat_dispatch.cpp
         src/native_chat_ipc.h

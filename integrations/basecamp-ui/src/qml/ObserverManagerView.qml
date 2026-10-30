@@ -71,12 +71,12 @@ Rectangle {
                     if (!b) return [];
 
                     const service = b.serviceStatus;
-                    const bridge = b.chatBridgeStatus;
+                    const sdk = b.chatSdkStatus;
                     const chat = b.chatStatus;
                     const conv = b.conversationsStatus;
-                    const bridgeReady = bridge === "Responding";
+                    const sdkReady = sdk === "Responding";
                     const chatReady =
-                        bridgeReady && chat === "Available";
+                        sdkReady && chat === "Available";
                     const https = b.healthStatus;
                     const httpsCurrent =
                         setupReadinessPanel.lastHttpsCheckedInputs
@@ -131,23 +131,23 @@ Rectangle {
                                     : "Run setup checks to verify authorization"
                         },
                         {
-                            name: "JSON-RPC Bridge",
-                            state: bridge === "Responding" ? "ready"
-                                : (bridge === "Unavailable"
-                                   || bridge === "Timed out")
+                            name: "Native Chat SDK",
+                            state: sdk === "Responding" ? "ready"
+                                : (sdk === "Unavailable"
+                                   || sdk === "Timed out")
                                   ? "failed" : "unknown",
-                            detail: bridge === "Responding"
-                                ? "Local bridge is responding"
-                                : "Load JSON-RPC Bridge in Module Inspector"
+                            detail: sdk === "Responding"
+                                ? "Native Chat SDK is responding"
+                                : "Check the native Chat SDK connection"
                         },
                         {
                             name: "Basecamp Chat",
-                            state: !bridgeReady ? "unknown"
+                            state: !sdkReady ? "unknown"
                                 : chat === "Available" ? "ready"
                                 : chat === "Unavailable"
                                   ? "failed" : "unknown",
-                            detail: !bridgeReady
-                                ? "Waiting for JSON-RPC Bridge"
+                            detail: !sdkReady
+                                ? "Waiting for native Chat SDK"
                                 : chat === "Available"
                                   ? "Chat has initialized successfully"
                                   : "Open Basecamp Chat once"
@@ -160,8 +160,8 @@ Rectangle {
                                   : (conv === "Unavailable"
                                      || conv === "Timed out")
                                     ? "failed" : "unknown",
-                            detail: !bridgeReady
-                                ? "Waiting for JSON-RPC Bridge"
+                            detail: !sdkReady
+                                ? "Waiting for native Chat SDK"
                                 : !chatReady
                                   ? "Waiting for Basecamp Chat"
                                   : conv.indexOf("Readable") === 0
@@ -249,16 +249,16 @@ Rectangle {
                                     Layout.fillWidth: true
 
                                     visible: check.state !== "ready"
-                                        && (check.name === "JSON-RPC Bridge"
+                                        && (check.name === "Native Chat SDK"
                                             || (check.name === "Basecamp Chat"
                                                 && root.backend
-                                                && root.backend.chatBridgeStatus
+                                                && root.backend.chatSdkStatus
                                                    === "Responding")
                                             || check.name === "LAN & HTTPS")
 
-                                    text: check.name === "JSON-RPC Bridge"
-                                        ? "Open Basecamp Module Inspector, "
-                                          + "load json_rpc_bridge, then "
+                                    text: check.name === "Native Chat SDK"
+                                        ? "Verify the Chat module is loaded, "
+                                          + "then "
                                           + "run setup checks again."
                                         : check.name === "Basecamp Chat"
                                           ? "Open Basecamp Chat once to "
@@ -282,7 +282,7 @@ Rectangle {
                                             || check.name === "Authorized Devices"
                                             || (check.name === "Conversations"
                                                 && root.backend
-                                                && root.backend.chatBridgeStatus
+                                                && root.backend.chatSdkStatus
                                                    === "Responding"
                                                 && root.backend.chatStatus
                                                    === "Available"))
@@ -819,8 +819,8 @@ Rectangle {
                     spacing: 16
 
                     Label {
-                        text: "Chat bridge: " + (root.backend
-                            ? root.backend.chatBridgeStatus
+                        text: "Native Chat SDK: " + (root.backend
+                            ? root.backend.chatSdkStatus
                             : "Unknown")
                         color: "#cbd5e1"
                         Layout.fillWidth: true

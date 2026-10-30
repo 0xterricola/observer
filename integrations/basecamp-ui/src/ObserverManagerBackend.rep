@@ -16,7 +16,7 @@ class ObserverManagerBackend
     PROP(QString healthDetails READONLY)
 
     PROP(bool chatBusy READONLY)
-    PROP(QString chatBridgeStatus READONLY)
+    PROP(QString chatSdkStatus READONLY)
     PROP(QString chatStatus READONLY)
     PROP(QString conversationsStatus READONLY)
     PROP(QString chatDetails READONLY)

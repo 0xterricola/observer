@@ -23,8 +23,7 @@ from v2_node import (
     LogosNodeReader,
 )
 from v2_chat import (
-    DEFAULT_CHAT_BRIDGE,
-    BasecampChatReader,
+    UnavailableChatReader,
 )
 from v2_status import (
     build_status_snapshot,
@@ -600,15 +599,6 @@ def main():
         ),
     )
 
-    parser.add_argument(
-        "--chat-bridge",
-        default=DEFAULT_CHAT_BRIDGE,
-        help=(
-            "local Basecamp JSON-RPC bridge; "
-            "keep this bound to loopback"
-        ),
-    )
-
     args = parser.parse_args()
 
     advertise_host = (
@@ -641,11 +631,7 @@ def main():
         )
     )
 
-    chat_reader = (
-        BasecampChatReader(
-            upstream=args.chat_bridge,
-        )
-    )
+    chat_reader = UnavailableChatReader()
 
     server = ThreadingHTTPServer(
         (

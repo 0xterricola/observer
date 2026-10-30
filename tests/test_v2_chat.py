@@ -1,122 +1,47 @@
-import json
 import unittest
 
-from v2_chat import BasecampChatReader
+from v2_chat import BasecampChatReader, UnavailableChatReader
 
 
-class BasecampChatReaderTests(
-    unittest.TestCase
-):
-    def test_bridge_must_be_loopback(self):
-        allowed = [
-            "http://127.0.0.1:8645/rpc",
-            "http://localhost:8645/rpc",
-            "http://[::1]:8645/rpc",
-        ]
+class BasecampChatReaderTests(unittest.TestCase):
+    def test_native_transport_required(self):
+        with self.assertRaises(TypeError):
+            BasecampChatReader()
 
-        for upstream in allowed:
-            BasecampChatReader(
-                upstream=upstream
-            )
+        with self.assertRaises(ValueError):
+            BasecampChatReader(rpc_call=None)
 
-        rejected = [
-            "http://192.168.1.10:8645/rpc",
-            "http://example.com:8645/rpc",
-            "ftp://127.0.0.1:8645/rpc",
-            (
-                "http://user:pass@"
-                "127.0.0.1:8645/rpc"
-            ),
-        ]
+    def test_native_call_delegation(self):
+        calls = []
 
-        for upstream in rejected:
-            with self.assertRaises(
-                ValueError
-            ):
-                BasecampChatReader(
-                    upstream=upstream
-                )
+        def rpc_call(method, params):
+            calls.append((method, params))
+            return ["ok"]
 
-    def test_json_rpc_envelope_validation(self):
-        class FakeResponse:
-            def __init__(self, payload):
-                self.data = json.dumps(
-                    payload
-                ).encode("utf-8")
-
-            def __enter__(self):
-                return self
-
-            def __exit__(
-                self,
-                exc_type,
-                exc,
-                traceback,
-            ):
-                return False
-
-            def read(self):
-                return self.data
-
-        class FakeOpener:
-            def __init__(self, payload):
-                self.payload = payload
-
-            def open(
-                self,
-                request,
-                timeout,
-            ):
-                return FakeResponse(
-                    self.payload
-                )
-
-        reader = BasecampChatReader()
-        reader._opener = FakeOpener(
-            {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "result": "abc123",
-            }
-        )
+        reader = BasecampChatReader(rpc_call=rpc_call)
 
         self.assertEqual(
-            reader._call(
-                "get_address"
-            ),
-            "abc123",
+            reader._call("list_conversations", None),
+            ["ok"],
+        )
+        self.assertEqual(
+            calls,
+            [("list_conversations", None)],
         )
 
-        invalid = [
-            {
-                "jsonrpc": "1.0",
-                "id": 1,
-                "result": "abc123",
-            },
-            {
-                "jsonrpc": "2.0",
-                "id": 2,
-                "result": "abc123",
-            },
-            {
-                "jsonrpc": "2.0",
-                "id": True,
-                "result": "abc123",
-            },
-        ]
+    def test_missing_native_ipc_is_unavailable(self):
+        reader = UnavailableChatReader()
 
-        for payload in invalid:
-            reader = BasecampChatReader()
-            reader._opener = FakeOpener(
-                payload
-            )
+        expected = {
+            "available": False,
+            "reason": "native_chat_unavailable",
+        }
 
-            with self.assertRaises(
-                ValueError
-            ):
-                reader._call(
-                    "get_address"
-                )
+        self.assertEqual(reader.read_conversations(), expected)
+        self.assertEqual(
+            reader.read_messages("example"),
+            expected,
+        )
 
     def test_chat_not_started(self):
         def rpc_call(method, params):

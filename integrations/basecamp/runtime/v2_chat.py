@@ -1,186 +1,18 @@
 #!/usr/bin/env python3
 
-import json
-from ipaddress import ip_address
-from urllib.parse import urlsplit
-from urllib.request import (
-    ProxyHandler,
-    Request,
-    build_opener,
-)
-
-
-DEFAULT_CHAT_BRIDGE = "http://127.0.0.1:8645/rpc"
 MAX_MESSAGES = 500
 
 
-def _validate_loopback_bridge(upstream):
-    if not isinstance(upstream, str):
-        raise ValueError(
-            "chat bridge URL must be a string"
-        )
-
-    parsed = urlsplit(upstream)
-
-    if parsed.scheme not in (
-        "http",
-        "https",
-    ):
-        raise ValueError(
-            "chat bridge URL must use HTTP or HTTPS"
-        )
-
-    if parsed.hostname is None:
-        raise ValueError(
-            "chat bridge URL has no host"
-        )
-
-    if (
-        parsed.username is not None
-        or parsed.password is not None
-    ):
-        raise ValueError(
-            "chat bridge URL must not contain credentials"
-        )
-
-    if parsed.fragment:
-        raise ValueError(
-            "chat bridge URL must not contain a fragment"
-        )
-
-    host = parsed.hostname
-
-    if host.lower() != "localhost":
-        try:
-            address = ip_address(host)
-        except ValueError as exc:
-            raise ValueError(
-                "chat bridge must use a loopback host"
-            ) from exc
-
-        if not address.is_loopback:
-            raise ValueError(
-                "chat bridge must use a loopback host"
-            )
-
-    return upstream
-
-
 class BasecampChatReader:
-    """
-    Strict read-only adapter from the local Basecamp JSON-RPC bridge
-    to the Observer v2 Chat response contract.
+    """Read-only Chat adapter using an injected native transport."""
 
-    This class never exposes Chat write methods and never handles
-    Chat keys. The bridge is expected to remain bound to loopback.
-    """
-
-    def __init__(
-        self,
-        upstream=DEFAULT_CHAT_BRIDGE,
-        *,
-        timeout=4.0,
-        rpc_call=None,
-    ):
-        self.upstream = (
-            _validate_loopback_bridge(
-                upstream
-            )
-        )
-        self.timeout = timeout
-        self.rpc_call = rpc_call
-        self._next_id = 1
-
-        # Never route the local Basecamp bridge through HTTP_PROXY,
-        # HTTPS_PROXY, or other environment proxy settings.
-        self._opener = (
-            build_opener(
-                ProxyHandler({})
-            )
-            if rpc_call is None
-            else None
-        )
+    def __init__(self, *, rpc_call):
+        if not callable(rpc_call):
+            raise ValueError("Native Chat transport callback required")
+        self._rpc_call = rpc_call
 
     def _call(self, method, params=None):
-        if self.rpc_call is not None:
-            return self.rpc_call(
-                method,
-                params,
-            )
-
-        request_id = self._next_id
-        self._next_id += 1
-
-        payload = {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "method": (
-                "chat_module."
-                + method
-            ),
-        }
-
-        if params is not None:
-            payload["params"] = params
-
-        body = json.dumps(
-            payload,
-            separators=(",", ":"),
-        ).encode("utf-8")
-
-        request = Request(
-            self.upstream,
-            data=body,
-            method="POST",
-            headers={
-                "Accept":
-                    "application/json",
-                "Content-Type":
-                    "application/json",
-            },
-        )
-
-        with self._opener.open(
-            request,
-            timeout=self.timeout,
-        ) as response:
-            data = response.read()
-
-        value = json.loads(
-            data.decode("utf-8")
-        )
-
-        if not isinstance(value, dict):
-            raise ValueError(
-                "bridge response is not an object"
-            )
-
-        if value.get("jsonrpc") != "2.0":
-            raise ValueError(
-                "bridge response has invalid JSON-RPC version"
-            )
-
-        response_id = value.get("id")
-
-        if (
-            type(response_id) is not int
-            or response_id != request_id
-        ):
-            raise ValueError(
-                "bridge response has mismatched id"
-            )
-
-        if "error" in value:
-            raise ValueError(
-                "bridge returned JSON-RPC error"
-            )
-
-        if "result" not in value:
-            raise ValueError(
-                "bridge response has no result"
-            )
-
-        return value["result"]
+        return self._rpc_call(method, params)
 
     def _available(self):
         address = self._call(
@@ -383,4 +215,22 @@ class BasecampChatReader:
             "available": True,
             "convo_id": convo_id,
             "messages": result,
+        }
+
+
+class UnavailableChatReader:
+    """Chat is unavailable when native IPC is not attached."""
+
+    @staticmethod
+    def read_conversations():
+        return {
+            "available": False,
+            "reason": "native_chat_unavailable",
+        }
+
+    @staticmethod
+    def read_messages(*args, **kwargs):
+        return {
+            "available": False,
+            "reason": "native_chat_unavailable",
         }

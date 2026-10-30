@@ -3,6 +3,7 @@
 #include "observer_health.h"
 #include <nlohmann/json.hpp>
 #include <logos_caller.h>
+#include "logos_sdk.h"
 #include <cstdlib>
 #include <cerrno>
 #include <chrono>
@@ -55,6 +56,57 @@ std::string probeChatHealth();
 std::string ObserverImpl::getChatHealth() {
     return probeChatHealth();
 }
+
+std::string ObserverImpl::getNativeChatStatus() {
+    try {
+        logos::CallError error;
+        const auto status =
+            modules().chat_module.status(&error, 2500);
+
+        if (!error.code.empty()) {
+            return nlohmann::json{
+                {"ok", false},
+                {"source", "native_sdk"},
+                {"reason", "chat_module_unavailable"}
+            }.dump();
+        }
+
+        logos::CallError addressError;
+        const auto address =
+            modules().chat_module.get_address(&addressError, 2500);
+
+        logos::CallError conversationsError;
+        const auto conversations =
+            modules().chat_module.list_conversations(
+                &conversationsError, 2500);
+
+        const bool addressOk = addressError.code.empty();
+        const bool conversationsOk = conversationsError.code.empty();
+
+        return nlohmann::json{
+            {"ok", true},
+            {"source", "native_sdk"},
+            {"conversation_count", status.convo_count},
+            {"delivery_state", status.delivery_state},
+            {"delivery_adopted", status.delivery_adopted},
+            {"address_call_ok", addressOk},
+            {"address_available", addressOk && !address.empty()},
+            {"conversations_readable", conversationsOk},
+            {"listed_conversation_count",
+                conversationsOk
+                    ? nlohmann::json(conversations.size())
+                    : nlohmann::json(nullptr)}
+        }.dump();
+
+    } catch (...) {
+        return nlohmann::json{
+            {"ok", false},
+            {"source", "native_sdk"},
+            {"reason", "native_chat_probe_failed"}
+        }.dump();
+    }
+}
+
 
 
 namespace {

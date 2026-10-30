@@ -3,6 +3,10 @@
 
   inputs = {
     logos-module-builder.url = "github:logos-co/logos-module-builder";
+    chat_module = {
+      url = "github:logos-co/logos-chat-module/v0.3.0";
+      flake = false;
+    };
   };
 
   outputs = inputs@{ logos-module-builder, ... }:
@@ -69,21 +73,21 @@
             test -f "$binary"
           done
 
-          install_name_tool -change             "@loader_path/../../../../../../../../lib/libssl.3.dylib"             "@loader_path/../../../libssl.3.dylib" "$rust"
+          install_name_tool -change             "@rpath/libssl.3.dylib"             "@loader_path/../../../libssl.3.dylib" "$rust"
 
-          install_name_tool -change             "@loader_path/../../../../../../../../lib/libcrypto.3.dylib"             "@loader_path/../../../libcrypto.3.dylib" "$rust"
+          install_name_tool -change             "@rpath/libcrypto.3.dylib"             "@loader_path/../../../libcrypto.3.dylib" "$rust"
 
-          install_name_tool -change             "@loader_path/../../../../../../lib/libssl.3.dylib"             "@loader_path/../libssl.3.dylib" "$ssl"
+          install_name_tool -change             "@rpath/libssl.3.dylib"             "@loader_path/../libssl.3.dylib" "$ssl"
 
-          install_name_tool -change             "@loader_path/../../../../../../lib/libcrypto.3.dylib"             "@loader_path/../libcrypto.3.dylib" "$ssl"
+          install_name_tool -change             "@rpath/libcrypto.3.dylib"             "@loader_path/../libcrypto.3.dylib" "$ssl"
 
-          install_name_tool -change             "@loader_path/../../../../../../lib/libcrypto.3.dylib"             "@loader_path/../libcrypto.3.dylib" "$hashlib"
+          install_name_tool -change             "@rpath/libcrypto.3.dylib"             "@loader_path/../libcrypto.3.dylib" "$hashlib"
 
-          install_name_tool -change             "@loader_path/../../../../../../lib/libcrypto.3.dylib"             "@loader_path/../libcrypto.3.dylib" "$legacy"
+          install_name_tool -change             "@rpath/libcrypto.3.dylib"             "@loader_path/../libcrypto.3.dylib" "$legacy"
 
           install_name_tool -id "@rpath/libssl.3.dylib"             "$internal/libssl.3.dylib"
 
-          install_name_tool -change             "@loader_path/../../../../../lib/libcrypto.3.dylib"             "@loader_path/libcrypto.3.dylib"             "$internal/libssl.3.dylib"
+          install_name_tool -change             "@rpath/libcrypto.3.dylib"             "@loader_path/libcrypto.3.dylib"             "$internal/libssl.3.dylib"
 
           install_name_tool -id "@rpath/libcrypto.3.dylib"             "$internal/libcrypto.3.dylib"
 

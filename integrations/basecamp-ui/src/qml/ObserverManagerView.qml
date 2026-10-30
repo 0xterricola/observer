@@ -744,6 +744,50 @@ Rectangle {
             }
         }
 
+
+        GroupBox {
+            title: "Native Chat SDK (test)"
+            visible: root.advancedSettingsExpanded
+            Layout.fillWidth: true
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 10
+
+                Label {
+                    text: "Native status: " + (root.backend
+                        ? root.backend.nativeChatStatus
+                        : "Backend unavailable")
+                    color: "#e2e8f0"
+                    font.bold: true
+                }
+
+                Button {
+                    text: root.backend && root.backend.nativeChatBusy
+                        ? "Checking..."
+                        : "Test Native Chat"
+                    enabled: !!root.backend
+                        && root.backend.ready
+                        && !root.backend.nativeChatBusy
+                    onClicked: root.backend.checkNativeChatStatus()
+                }
+
+                TextArea {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 140
+                    readOnly: true
+                    text: root.backend
+                        ? root.backend.nativeChatDetails : ""
+                    color: "#cbd5e1"
+                    wrapMode: TextArea.Wrap
+                    selectByMouse: true
+                    background: Rectangle {
+                        color: "#161f2c"
+                        radius: 6
+                    }
+                }
+            }
+        }
         GroupBox {
             title: "Service Health"
             visible: root.advancedSettingsExpanded

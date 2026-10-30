@@ -20,6 +20,9 @@ class ObserverManagerBackend
     PROP(QString chatStatus READONLY)
     PROP(QString conversationsStatus READONLY)
     PROP(QString chatDetails READONLY)
+    PROP(bool nativeChatBusy READONLY)
+    PROP(QString nativeChatStatus READONLY)
+    PROP(QString nativeChatDetails READONLY)
 
     PROP(bool deviceBusy READONLY)
     PROP(QString deviceStatus READONLY)
@@ -36,5 +39,6 @@ class ObserverManagerBackend
     SLOT(void createPairingOffer())
 
     SLOT(void checkChatHealth())
+    SLOT(void checkNativeChatStatus())
     SLOT(void checkDeviceSummary())
 }

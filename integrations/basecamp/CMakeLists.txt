@@ -19,6 +19,10 @@ logos_module(
         src/observer_health.h
         src/observer_health.cpp
         src/chat_health.cpp
+        src/native_chat_dispatch.h
+        src/native_chat_dispatch.cpp
+        src/native_chat_ipc.h
+        src/native_chat_ipc.cpp
 )
 
 

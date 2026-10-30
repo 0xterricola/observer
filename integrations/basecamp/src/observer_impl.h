@@ -19,6 +19,8 @@ public:
     // Read-only local Basecamp Chat diagnostics.
     std::string getChatHealth();
 
+    std::string getNativeChatStatus();
+
     std::string startService();
     std::string getServiceStatus();
     std::string stopService();

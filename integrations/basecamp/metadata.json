@@ -1,7 +1,7 @@
 {
   "name": "observer",
   "display_name": "Observer",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Basecamp integration for managing and monitoring Observer",
   "author": "0xterricola",
   "type": "core",

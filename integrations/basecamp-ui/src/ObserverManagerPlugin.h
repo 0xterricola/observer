@@ -34,7 +34,7 @@ public:
 
     QString version() const override
     {
-        return QStringLiteral("0.1.0");
+        return QStringLiteral("0.1.4");
     }
 
     Q_INVOKABLE void initLogos(LogosAPI* api);

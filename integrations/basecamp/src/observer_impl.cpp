@@ -27,7 +27,7 @@ ObserverImpl::~ObserverImpl() = default;
 std::string ObserverImpl::getInfo() {
     return R"json({
         "module": "observer",
-        "version": "0.1.4",
+        "version": "0.1.5",
         "managed_service": "manual"
     })json";
 }

@@ -852,6 +852,167 @@ class ObserverV2HTTPSServerTests(
         )
 
 
+
+    def test_native_chat_ipc_authorization_boundary(self):
+        import socket
+        import struct
+        import time
+        from v2_chat import BasecampChatReader
+        from v2_chat_native import NativeChatTransport
+
+        client, peer = socket.socketpair()
+        received = []
+        errors = []
+
+        responses = [
+            ("get_address", "test-address"),
+            ("list_conversations", [
+                {"convo_id": "c1", "message_count": 2}
+            ]),
+            ("get_address", "test-address"),
+            ("get_messages", [
+                {
+                    "content": "first",
+                    "from_self": False,
+                    "timestamp_ms": 100,
+                    "sender": "peer",
+                },
+                {
+                    "content": "second",
+                    "from_self": True,
+                    "timestamp_ms": 200,
+                },
+            ]),
+        ]
+
+        def read_exact(count):
+            data = bytearray()
+            while len(data) < count:
+                chunk = peer.recv(count - len(data))
+                if not chunk:
+                    raise EOFError("native peer disconnected")
+                data.extend(chunk)
+            return bytes(data)
+
+        def serve_native():
+            try:
+                peer.settimeout(5)
+                for expected, result in responses:
+                    length = struct.unpack("!I", read_exact(4))[0]
+                    if not 0 < length <= 8 * 1024 * 1024:
+                        raise ValueError("invalid frame length")
+
+                    request = json.loads(read_exact(length))
+                    received.append(request)
+
+                    if request.get("method") != expected:
+                        raise AssertionError(
+                            f"Expected {expected}, got {request}"
+                        )
+
+                    payload = json.dumps({
+                        "ok": True,
+                        "result": result,
+                    }).encode("utf-8")
+
+                    peer.sendall(
+                        struct.pack("!I", len(payload)) + payload
+                    )
+            except Exception as exc:
+                errors.append(repr(exc))
+            finally:
+                peer.close()
+
+        worker = threading.Thread(target=serve_native, daemon=True)
+        worker.start()
+
+        previous_reader = self.server.chat_reader
+        self.server.chat_reader = BasecampChatReader(
+            rpc_call=NativeChatTransport(client, timeout=4).call
+        )
+
+        try:
+            denied = self.pair_device(["node.status.read"])
+            path = "/v2/chat/conversations"
+
+            headers = self.signed_headers(
+                denied,
+                method="GET",
+                path=path,
+                nonce_byte=90,
+                timestamp=int(time.time()),
+            )
+
+            status, body, _ = self.request(
+                "GET", path, headers=headers
+            )
+
+            self.assertEqual(status, 403)
+            self.assertEqual(json.loads(body), {"error": "scope"})
+            self.assertEqual(received, [])
+
+            allowed = self.pair_device(["chat.read"])
+
+            headers = self.signed_headers(
+                allowed,
+                method="GET",
+                path=path,
+                nonce_byte=91,
+                timestamp=int(time.time()),
+            )
+
+            status, body, _ = self.request(
+                "GET", path, headers=headers
+            )
+
+            self.assertEqual(status, 200)
+            self.assertEqual(
+                json.loads(body)["conversations"],
+                [{"convo_id": "c1", "message_count": 2}],
+            )
+
+            path = "/v2/chat/messages?convo=c1&since_ms=100"
+
+            headers = self.signed_headers(
+                allowed,
+                method="GET",
+                path=path,
+                nonce_byte=92,
+                timestamp=int(time.time()),
+            )
+
+            status, body, _ = self.request(
+                "GET", path, headers=headers
+            )
+
+            self.assertEqual(status, 200)
+            self.assertEqual(
+                [m["content"] for m in json.loads(body)["messages"]],
+                ["second"],
+            )
+
+            self.assertEqual(
+                [request["method"] for request in received],
+                [
+                    "get_address",
+                    "list_conversations",
+                    "get_address",
+                    "get_messages",
+                ],
+            )
+
+        finally:
+            self.server.chat_reader = previous_reader
+            try:
+                client.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            client.close()
+            worker.join(timeout=5)
+
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(errors, [])
+
     def test_chat_conversations_route(
         self,
     ):

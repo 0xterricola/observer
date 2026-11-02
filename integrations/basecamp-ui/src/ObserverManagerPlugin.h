@@ -21,7 +21,7 @@ class ObserverManagerPlugin
         IID ObserverManagerPluginInterface_iid
         FILE "../metadata.json")
 
-    Q_INTERFACES(ObserverManagerPluginInterface)
+    Q_INTERFACES(ObserverManagerPluginInterface LogosViewPlugin)
 
 public:
     explicit ObserverManagerPlugin(QObject* parent = nullptr);
@@ -34,7 +34,7 @@ public:
 
     QString version() const override
     {
-        return QStringLiteral("0.1.0");
+        return QStringLiteral("0.1.4");
     }
 
     Q_INVOKABLE void initLogos(LogosAPI* api);

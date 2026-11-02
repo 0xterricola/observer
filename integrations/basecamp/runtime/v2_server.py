@@ -22,9 +22,11 @@ from v2_node import (
     DEFAULT_UPSTREAM,
     LogosNodeReader,
 )
+import socket
+from v2_chat_native import NativeChatTransport
 from v2_chat import (
-    DEFAULT_CHAT_BRIDGE,
     BasecampChatReader,
+    UnavailableChatReader,
 )
 from v2_status import (
     build_status_snapshot,
@@ -601,12 +603,10 @@ def main():
     )
 
     parser.add_argument(
-        "--chat-bridge",
-        default=DEFAULT_CHAT_BRIDGE,
-        help=(
-            "local Basecamp JSON-RPC bridge; "
-            "keep this bound to loopback"
-        ),
+        "--chat-native-fd",
+        type=int,
+        default=None,
+        help="Inherited private native Chat IPC descriptor",
     )
 
     args = parser.parse_args()
@@ -641,11 +641,16 @@ def main():
         )
     )
 
-    chat_reader = (
-        BasecampChatReader(
-            upstream=args.chat_bridge,
+    if args.chat_native_fd is not None:
+        native_socket = socket.socket(
+            fileno=args.chat_native_fd
         )
-    )
+        chat_transport = NativeChatTransport(native_socket)
+        chat_reader = BasecampChatReader(
+            rpc_call=chat_transport.call
+        )
+    else:
+        chat_reader = UnavailableChatReader()
 
     server = ThreadingHTTPServer(
         (

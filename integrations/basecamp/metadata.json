@@ -1,7 +1,7 @@
 {
   "name": "observer",
   "display_name": "Observer",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Basecamp integration for managing and monitoring Observer",
   "author": "0xterricola",
   "type": "core",
@@ -10,6 +10,12 @@
   "category": "system",
   "main": "observer_plugin",
   "dependencies": [],
+  "optional_dependencies": [
+    {
+      "name": "chat_module",
+      "version": ">=0.3.0"
+    }
+  ],
   "nix": {
     "packages": {
       "build": [],
@@ -25,6 +31,12 @@
       "extra_sources": [],
       "extra_include_dirs": [],
       "extra_link_libraries": []
+    }
+  },
+  "dependency_overrides": {
+    "chat_module": {
+      "input": "chat_module",
+      "file": "rust-lib/chat_module.lidl"
     }
   }
 }

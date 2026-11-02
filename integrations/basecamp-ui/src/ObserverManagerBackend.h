@@ -28,6 +28,7 @@ public slots:
         QString spkiPin) override;
 
     void checkChatHealth() override;
+    void checkNativeChatStatus() override;
     void checkDeviceSummary() override;
 
     void refreshServiceStatus() override;

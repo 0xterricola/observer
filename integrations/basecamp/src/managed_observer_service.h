@@ -2,6 +2,7 @@
 
 #include <mutex>
 #include <string>
+#include <thread>
 
 struct ManagedObserverResult {
     bool ok;
@@ -24,8 +25,11 @@ public:
 
 private:
     bool runningLocked();
+    void stopNativeIpcLocked();
 
     std::mutex mutex_;
     int pid_ = -1;
     std::string lastFailure_;
+    int nativeIpcFd_ = -1;
+    std::thread nativeIpcWorker_;
 };

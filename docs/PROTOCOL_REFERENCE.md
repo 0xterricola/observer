@@ -32,27 +32,21 @@ Logos node API
 
 The raw Logos API stays bound to localhost.
 
-When Basecamp Chat support is enabled, the Logos JSON-RPC bridge also remains loopback-only:
+When Basecamp Chat support is enabled, Observer uses native IPC within the managed Basecamp runtime:
 
 ```text
-iPhone / client
+iPhone / Casberi
        |
        | TLS 1.3 + pairing + HMAC
        v
 Logos Observer v2
        |
-       | localhost only
-       v
-logos-json-rpc-bridge
-127.0.0.1:8645
-       |
+       | Native local IPC
        v
 Basecamp chat_module
 ```
 
-Observer rejects non-loopback Chat bridge targets.
-
-The client never receives arbitrary access to the Logos API or JSON-RPC bridge.
+The native Chat adapter is local to Basecamp. Remote clients cannot invoke arbitrary Logos API methods or access native IPC directly.
 
 Observer exposes only explicitly implemented, sanitized, read-only endpoints.
 
@@ -160,7 +154,7 @@ HMAC-signed GET /v2/chat/conversations
 Logos Observer v2
   |
   v
-localhost json_rpc_bridge
+native Basecamp Chat IPC
   |
   v
 live Basecamp chat_module
@@ -504,19 +498,11 @@ client verification.
 
 ### Basecamp Chat Read Path
 
-Observer v2 can optionally expose a sanitized, read-only view of Basecamp Chat through the Logos JSON-RPC bridge.
+Observer v2 exposes a sanitized, read-only view of Basecamp Chat through its native managed Chat adapter.
 
-Related component:
+Chat reads use local native IPC between the managed Observer module and Basecamp Chat. No separate HTTP bridge is required.
 
-- [logos-co/logos-json-rpc-bridge](https://github.com/logos-co/logos-json-rpc-bridge)
-
-The default bridge endpoint is:
-
-```text
-http://127.0.0.1:8645/rpc
-```
-
-The bridge is a local interoperability layer, not the remote trust boundary.
+Native IPC is a local integration boundary, not the remote client trust boundary.
 
 Observer remains responsible for:
 
@@ -530,7 +516,7 @@ scope authorization
 revocation
 ```
 
-Observer rejects non-loopback `--chat-bridge` targets. The raw JSON-RPC bridge is not intended to be exposed directly to the LAN.
+Remote clients receive only the data exposed through authorized Observer API endpoints.
 
 The Observer Chat adapter invokes only read operations:
 
@@ -616,24 +602,23 @@ If Basecamp Chat has not been initialized and `chat_module.get_address` is empty
 }
 ```
 
-The current Observer Chat API uses authenticated HTTP polling. JSON-RPC bridge event subscriptions are not exposed through Observer v2 at this time.
+The current Observer Chat API uses authenticated HTTP polling. Native Chat IPC provides the underlying read integration; Chat event subscriptions are not exposed through Observer v2.
 
 #### Running a Chat-capable Observer
 
-A Chat-capable Observer can run on the same machine as Basecamp while keeping the bridge on loopback:
+Chat access requires Basecamp Chat and the managed Observer core integration.
 
-```bash
-LAN_IP=192.168.x.x
-.venv/bin/python v2_server.py --host 0.0.0.0 --port 8444 --advertise-host "$LAN_IP" --state-dir .v2-state-chat-dev --chat-bridge http://127.0.0.1:8645/rpc
-```
+1. Install the Observer core and UI modules in Logos Basecamp.
+2. Open Basecamp Chat and initialize its conversations.
+3. Start Observer through the Observer UI.
+4. Pair Casberi with the `chat.read` capability.
+5. Run the six Observer readiness checks.
 
-A Chat-only pairing offer can then be created explicitly:
+The standalone `v2_server.py` remains available for independent monitoring, but it does not automatically connect to native Basecamp Chat IPC.
 
-```bash
-.venv/bin/python v2_pair_cli.py --state-dir .v2-state-chat-dev --host "$LAN_IP" --port 8444 --name "Basecamp Chat" --scope chat.read
-```
+Pairing with `chat.read` does not implicitly grant node, network, mining, or rewards scopes.
 
-This pairing does not implicitly grant node, network, mining, or rewards scopes.
+See [Observer Chat Setup](OBSERVER_CHAT_SETUP.md) for the complete Quick Start and troubleshooting instructions.
 
 ### Rewards Privacy Boundary
 

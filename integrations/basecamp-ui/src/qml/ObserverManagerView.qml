@@ -9,9 +9,22 @@ Rectangle {
     implicitHeight: 620
     color: "#0b0d10"
 
-    readonly property var backend:
-        logos ? logos.module("observer_ui") : null
+    readonly property var backend: logos.module("observer_ui")
+    property bool backendConnected: false
 
+    Connections {
+        target: logos
+
+        function onViewModuleReadyChanged(moduleName, isReady) {
+            if (moduleName === "observer_ui")
+                root.backendConnected = isReady && root.backend !== null
+        }
+    }
+
+    Component.onCompleted: {
+        root.backendConnected =
+            root.backend !== null && logos.isViewModuleReady("observer_ui")
+    }
 
     property bool advancedSettingsExpanded: false
 
@@ -71,12 +84,12 @@ Rectangle {
                     if (!b) return [];
 
                     const service = b.serviceStatus;
-                    const bridge = b.chatBridgeStatus;
+                    const sdk = b.chatSdkStatus;
                     const chat = b.chatStatus;
                     const conv = b.conversationsStatus;
-                    const bridgeReady = bridge === "Responding";
+                    const sdkReady = sdk === "Responding";
                     const chatReady =
-                        bridgeReady && chat === "Available";
+                        sdkReady && chat === "Available";
                     const https = b.healthStatus;
                     const httpsCurrent =
                         setupReadinessPanel.lastHttpsCheckedInputs
@@ -131,23 +144,23 @@ Rectangle {
                                     : "Run setup checks to verify authorization"
                         },
                         {
-                            name: "JSON-RPC Bridge",
-                            state: bridge === "Responding" ? "ready"
-                                : (bridge === "Unavailable"
-                                   || bridge === "Timed out")
+                            name: "Native Chat SDK",
+                            state: sdk === "Responding" ? "ready"
+                                : (sdk === "Unavailable"
+                                   || sdk === "Timed out")
                                   ? "failed" : "unknown",
-                            detail: bridge === "Responding"
-                                ? "Local bridge is responding"
-                                : "Load JSON-RPC Bridge in Module Inspector"
+                            detail: sdk === "Responding"
+                                ? "Native Chat SDK is responding"
+                                : "Check the native Chat SDK connection"
                         },
                         {
                             name: "Basecamp Chat",
-                            state: !bridgeReady ? "unknown"
+                            state: !sdkReady ? "unknown"
                                 : chat === "Available" ? "ready"
                                 : chat === "Unavailable"
                                   ? "failed" : "unknown",
-                            detail: !bridgeReady
-                                ? "Waiting for JSON-RPC Bridge"
+                            detail: !sdkReady
+                                ? "Waiting for native Chat SDK"
                                 : chat === "Available"
                                   ? "Chat has initialized successfully"
                                   : "Open Basecamp Chat once"
@@ -160,8 +173,8 @@ Rectangle {
                                   : (conv === "Unavailable"
                                      || conv === "Timed out")
                                     ? "failed" : "unknown",
-                            detail: !bridgeReady
-                                ? "Waiting for JSON-RPC Bridge"
+                            detail: !sdkReady
+                                ? "Waiting for native Chat SDK"
                                 : !chatReady
                                   ? "Waiting for Basecamp Chat"
                                   : conv.indexOf("Readable") === 0
@@ -249,16 +262,16 @@ Rectangle {
                                     Layout.fillWidth: true
 
                                     visible: check.state !== "ready"
-                                        && (check.name === "JSON-RPC Bridge"
+                                        && (check.name === "Native Chat SDK"
                                             || (check.name === "Basecamp Chat"
                                                 && root.backend
-                                                && root.backend.chatBridgeStatus
+                                                && root.backend.chatSdkStatus
                                                    === "Responding")
                                             || check.name === "LAN & HTTPS")
 
-                                    text: check.name === "JSON-RPC Bridge"
-                                        ? "Open Basecamp Module Inspector, "
-                                          + "load json_rpc_bridge, then "
+                                    text: check.name === "Native Chat SDK"
+                                        ? "Verify the Chat module is loaded, "
+                                          + "then "
                                           + "run setup checks again."
                                         : check.name === "Basecamp Chat"
                                           ? "Open Basecamp Chat once to "
@@ -282,7 +295,7 @@ Rectangle {
                                             || check.name === "Authorized Devices"
                                             || (check.name === "Conversations"
                                                 && root.backend
-                                                && root.backend.chatBridgeStatus
+                                                && root.backend.chatSdkStatus
                                                    === "Responding"
                                                 && root.backend.chatStatus
                                                    === "Available"))
@@ -294,7 +307,7 @@ Rectangle {
                                           : "Recheck Chat"
 
                                     enabled: !!root.backend
-                                        && root.backend.ready
+                                        && root.backendConnected
                                         && (
                                             check.name === "Observer Service"
                                             ? !root.backend.serviceBusy
@@ -343,7 +356,7 @@ Rectangle {
                     Button {
                         text: "Run Setup Checks"
                         enabled: !!root.backend
-                            && root.backend.ready
+                            && root.backendConnected
                             && !root.backend.serviceBusy
                             && !root.backend.chatBusy
                             && !root.backend.healthBusy
@@ -410,7 +423,7 @@ Rectangle {
                         : "Pair New Device"
 
                     enabled: !!root.backend
-                        && root.backend.ready
+                        && root.backendConnected
                         && !root.backend.serviceBusy
                         && !root.backend.pairingBusy
                         && root.backend.serviceStatus === "running"
@@ -588,7 +601,7 @@ Rectangle {
                     Button {
                         text: "Start Observer"
                         enabled: !!root.backend
-                            && root.backend.ready
+                            && root.backendConnected
                             && !root.backend.serviceBusy
                             && root.backend.serviceStatus !== "running"
                             && root.backend.serviceStatus !== "starting"
@@ -599,7 +612,7 @@ Rectangle {
                     Button {
                         text: "Stop Observer"
                         enabled: !!root.backend
-                            && root.backend.ready
+                            && root.backendConnected
                             && !root.backend.serviceBusy
                             && (root.backend.serviceStatus === "running"
                                 || root.backend.serviceStatus === "starting")
@@ -613,7 +626,7 @@ Rectangle {
                             : "Refresh Status"
 
                         enabled: !!root.backend
-                            && root.backend.ready
+                            && root.backendConnected
                             && !root.backend.serviceBusy
 
                         onClicked: root.backend.refreshServiceStatus()
@@ -727,7 +740,7 @@ Rectangle {
                           : "Check Health"
 
                     enabled: !!root.backend
-                             && root.backend.ready
+                             && root.backendConnected
                              && !root.backend.healthBusy
                              && endpointField.text.trim().length > 0
                              && certField.text.trim().length > 0
@@ -744,6 +757,50 @@ Rectangle {
             }
         }
 
+
+        GroupBox {
+            title: "Native Chat SDK (test)"
+            visible: root.advancedSettingsExpanded
+            Layout.fillWidth: true
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 10
+
+                Label {
+                    text: "Native status: " + (root.backend
+                        ? root.backend.nativeChatStatus
+                        : "Backend unavailable")
+                    color: "#e2e8f0"
+                    font.bold: true
+                }
+
+                Button {
+                    text: root.backend && root.backend.nativeChatBusy
+                        ? "Checking..."
+                        : "Test Native Chat"
+                    enabled: !!root.backend
+                        && root.backendConnected
+                        && !root.backend.nativeChatBusy
+                    onClicked: root.backend.checkNativeChatStatus()
+                }
+
+                TextArea {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 140
+                    readOnly: true
+                    text: root.backend
+                        ? root.backend.nativeChatDetails : ""
+                    color: "#cbd5e1"
+                    wrapMode: TextArea.Wrap
+                    selectByMouse: true
+                    background: Rectangle {
+                        color: "#161f2c"
+                        radius: 6
+                    }
+                }
+            }
+        }
         GroupBox {
             title: "Service Health"
             visible: root.advancedSettingsExpanded
@@ -775,8 +832,8 @@ Rectangle {
                     spacing: 16
 
                     Label {
-                        text: "Chat bridge: " + (root.backend
-                            ? root.backend.chatBridgeStatus
+                        text: "Native Chat SDK: " + (root.backend
+                            ? root.backend.chatSdkStatus
                             : "Unknown")
                         color: "#cbd5e1"
                         Layout.fillWidth: true
@@ -795,7 +852,7 @@ Rectangle {
                             ? "Checking..."
                             : "Check Chat"
                         enabled: !!root.backend
-                            && root.backend.ready
+                            && root.backendConnected
                             && !root.backend.chatBusy
                         onClicked: root.backend.checkChatHealth()
                     }
